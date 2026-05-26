@@ -1,0 +1,28 @@
+# Build folders
+Debug/
+Release/
+build/
+
+# Keil generated
+*.o
+*.d
+*.crf
+*.lst
+*.axf
+*.map
+*.hex
+*.bin
+
+# Keil user files
+*.uvgui.*
+*.bak
+
+# VSCode
+.vscode/
+
+# CubeMX
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

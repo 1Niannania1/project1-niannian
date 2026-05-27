@@ -1,10 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"path": "MDK-ARM"
 		},
 		{
-			"path": "MDK-ARM"
+			"path": "."
 		}
 	],
 	"settings": {}

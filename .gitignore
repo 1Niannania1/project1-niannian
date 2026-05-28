@@ -18,6 +18,14 @@ build/
 *.uvguix.*
 *.uvgui.*
 *.scvd
+MDK-ARM/**/*.scvd
+MDK-ARM/**/*.uvguix.*
+MDK-ARM/**/*.uvoptx
+MDK-ARM/**/*.lnp
+MDK-ARM/**/*.iex
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/_*/
+MDK-ARM/RTE/Device/
 
 # VSCode
 .vscode/

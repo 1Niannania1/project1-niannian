@@ -19,6 +19,7 @@ build/
 
 # VSCode
 .vscode/
+*.code-workspace
 
 # CubeMX
 *.tmp

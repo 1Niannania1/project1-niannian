@@ -14,8 +14,10 @@ build/
 *.bin
 
 # Keil user files
+*.uvoptx
+*.uvguix.*
 *.uvgui.*
-*.bak
+*.scvd
 
 # VSCode
 .vscode/
@@ -27,3 +29,14 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# 其他
+*.lnp
+*.dep
+*.bak
+JLinkLog.txt
+*.log
+
+# Keil 生成日志
+*.build_log.htm
+*.htm

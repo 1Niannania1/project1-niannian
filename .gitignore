@@ -1,50 +1,26 @@
-# Build folders
-Debug/
-Release/
-build/
-
-# Keil generated
-*.o
-*.d
-*.crf
-*.lst
-*.axf
-*.map
-*.hex
-*.bin
 
 # Keil user files
-*.uvoptx
-*.uvguix.*
-*.uvgui.*
-*.scvd
 MDK-ARM/**/*.scvd
 MDK-ARM/**/*.uvguix.*
 MDK-ARM/**/*.uvoptx
-MDK-ARM/**/*.lnp
-MDK-ARM/**/*.iex
+MDK-ARM/**/*.lst
+MDK-ARM/.vscode/
+.mxproject
+
+
+
+# 忽略编译生成的文件夹
+MDK-ARM/Objects/
+MDK-ARM/Listings/
 MDK-ARM/DebugConfig/
-MDK-ARM/RTE/_*/
-MDK-ARM/RTE/Device/
+MDK-ARM/RTE/
+MDK-ARM/IIC_HAL/
 
 # VSCode
 .vscode/
 *.code-workspace
 
-# CubeMX
-*.tmp
 
-# OS
-.DS_Store
-Thumbs.db
 
-# 其他
-*.lnp
-*.dep
-*.bak
-JLinkLog.txt
-*.log
 
-# Keil 生成日志
-*.build_log.htm
-*.htm
+

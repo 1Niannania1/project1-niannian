@@ -27,7 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "oled_hal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,7 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+void OLED_DrawWave(uint16_t *buf, uint16_t len);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,7 +60,7 @@ volatile uint8_t ADC_Mode=2;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t ADC_READ[2];
+uint16_t ADC_READ[1];
 /* USER CODE END 0 */
 
 /**
@@ -70,6 +70,9 @@ uint16_t ADC_READ[2];
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+uint16_t wave_buf[256];
+uint16_t wave_idx = 0;
+
 const static uint16_t arr1[2]={0,4095};        //方波
 uint8_t arr1_index=0; //指向arr1的第几个元素 索引
 
@@ -108,7 +111,7 @@ static const uint16_t arr2[256] = {                                     //正弦
 };
 uint32_t arr2_index=0; //指向arr2的第几个元素 索引
 
-//给uint16_t方便后续判断，避免溢出
+//给uint16_t方便后续判断，避免溢�??
 
 //三角
 static const uint16_t arr3[256] = { 
@@ -174,6 +177,7 @@ uint16_t arr3_index=0; //指向arr3的第几个元素 索引
   MX_I2C1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+ssd1306_Init(SSD1306_SWITCHCAPVCC);
 HAL_TIM_Base_Start_IT(&htim1);
 HAL_ADC_Start_DMA(&hadc1,(uint32_t *)ADC_READ,1);
 
@@ -183,7 +187,7 @@ HAL_ADC_Start_DMA(&hadc1,(uint32_t *)ADC_READ,1);
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-while (ADC_flag==1)
+if (ADC_flag==1)
 {
 switch (ADC_Mode)
 {
@@ -218,9 +222,15 @@ default:
   break;
 }
 
-printf("read=%d\n",ADC_READ[0]);
-  ADC_flag=0;
-  
+
+
+// after transfer V,read the V by ADC
+wave_buf[wave_idx++] = ADC_READ[0];   
+
+if (wave_idx >= 256)
+{
+    wave_idx = 0;
+    OLED_DrawWave(wave_buf, 256);     
 }
     /* USER CODE END WHILE */
 
@@ -229,6 +239,7 @@ printf("read=%d\n",ADC_READ[0]);
     /* USER CODE BEGIN 3 */
   
   /* USER CODE END 3 */
+}
 }
 
 /**
@@ -294,6 +305,29 @@ void Error_Handler(void)
   {
   }
   /* USER CODE END Error_Handler_Debug */
+}
+
+void OLED_DrawWave(uint16_t *buf, uint16_t len)
+{
+    int16_t screenW = oled_getWidth();
+    int16_t screenH = oled_getHeight();
+
+    if (len < 2 || screenH < 2) return;
+
+    ssd1306_clearScreen();
+    ssd1306_drawLine(0, screenH / 2, screenW - 1, screenH / 2, WHITE);
+
+    for (uint16_t i = 0; i < len - 1; i++)
+    {
+        int16_t x0 = (int16_t)i;
+        int16_t x1 = (int16_t)(i + 1);
+        int16_t y0 = (int16_t)(screenH - 1 - ((uint32_t)buf[i] * (screenH - 1) / 4095));
+        int16_t y1 = (int16_t)(screenH - 1 - ((uint32_t)buf[i + 1] * (screenH - 1) / 4095));
+
+        ssd1306_drawLine(x0, y0, x1, y1, WHITE);
+    }
+
+    ssd1306_updateScreen();
 }
 
 #ifdef  USE_FULL_ASSERT

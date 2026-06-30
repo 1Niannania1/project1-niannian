@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dma.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
@@ -53,11 +55,12 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 volatile uint8_t ADC_flag=0;
+volatile uint8_t ADC_Mode=2;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint16_t ADC_READ[2];
 /* USER CODE END 0 */
 
 /**
@@ -67,10 +70,10 @@ volatile uint8_t ADC_flag=0;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-const uint16_t arr1[2]={0,4095};        //方波
+const static uint16_t arr1[2]={0,4095};        //方波
 uint8_t arr1_index=0; //指向arr1的第几个元素 索引
 
-static const uint16_t arr2[256] = {                                     //正弦�?
+static const uint16_t arr2[256] = {                                     //正弦
   2048, 2098, 2148, 2198, 2248, 2298, 2348, 2397,
   2447, 2496, 2545, 2594, 2642, 2690, 2737, 2784,
   2831, 2877, 2923, 2968, 3013, 3057, 3100, 3143,
@@ -103,10 +106,12 @@ static const uint16_t arr2[256] = {                                     //正弦
   1359, 1406, 1454, 1502, 1551, 1600, 1649, 1699,
   1748, 1798, 1848, 1898, 1948, 1998
 };
-uint8_t arr2_index=0; //指向arr2的第几个元素 索引
+uint32_t arr2_index=0; //指向arr2的第几个元素 索引
 
+//给uint16_t方便后续判断，避免溢出
 
-static const uint16_t arr3[256] = {
+//三角
+static const uint16_t arr3[256] = { 
     0,   32,   64,   96,  128,  160,  192,  224,
   256,  288,  320,  352,  384,  416,  448,  480,
   512,  544,  576,  608,  640,  672,  704,  736,
@@ -141,7 +146,7 @@ static const uint16_t arr3[256] = {
   256,  224,  192,  160,  128,   96,   64,   32
 };
 
-uint8_t arr3_index=0; //指向arr3的第几个元素 索引
+uint16_t arr3_index=0; //指向arr3的第几个元素 索引
 
   /* USER CODE END 1 */
 
@@ -163,45 +168,61 @@ uint8_t arr3_index=0; //指向arr3的第几个元素 索引
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 HAL_TIM_Base_Start_IT(&htim1);
+HAL_ADC_Start_DMA(&hadc1,(uint32_t *)ADC_READ,1);
 
-// for (uint8_t addr = 1; addr < 128; addr++) {
-//     if (HAL_I2C_IsDeviceReady(&hi2c2, addr<<1, 1, 100) == HAL_OK) {
-//         printf("Found device at 7-bit addr: 0x%02X\r\n", addr);
-//     }
-// }
-// printf("Scan done.\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-if (ADC_flag==1)
+while (ADC_flag==1)
 {
-//   DAC_writebytes(&(arr1[arr1_index]));
-//  printf("send over");
-//   if (++arr1_index==2)
-//   {
-//   arr1_index=0;
-//   }
-//   ADC_flag=0;
+switch (ADC_Mode)
+{
+case 1 :
+  DAC_writebytes(&(arr1[arr1_index]));
+printf("transfer=%d\n",(arr1[arr1_index]));
+  if (++arr1_index==2)
+  {
+  arr1_index=0;
+  }
+  break;
 
-
+case 2:
   DAC_writebytes(&(arr2[arr2_index]));
- printf("send over");
+printf("transfer=%d\n",(arr2[arr2_index]));
   if (++arr2_index==256)
   {
   arr2_index=0;
   }
+break;
+
+case 3:
+  DAC_writebytes(&(arr3[arr3_index]));
+printf("transfer=%d\n",(arr3[arr3_index]));
+  if (++arr3_index==256)
+  {
+  arr3_index=0;
+  }
+break;
+
+default:
+  break;
+}
+
+printf("read=%d\n",ADC_READ[0]);
   ADC_flag=0;
   
 }
+    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -218,6 +239,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -244,6 +266,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }

@@ -41,7 +41,7 @@ void DAC_writebytes(const uint16_t *DAC )
     arr[0]=(0x00<<4)+(((*DAC)>>8)&(0x0f));  //0x00-fast_mode,不关断。后一部分是取出DAC的高四位
     arr[1]=(*DAC)&(0xff);                //DAC的低八位
 HAL_I2C_Master_Transmit(&hi2c1,w_address,arr,2,1000);
-HAL_Delay(1);//fast_mode,no need to eeprom write (busy flag)
+// HAL_Delay(1);//fast_mode,no need to eeprom write (busy flag)
                                                        
 }
 

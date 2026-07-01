@@ -38,6 +38,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 void OLED_DrawWave(uint16_t *buf, uint16_t len);
+void Wave_AddPoint(uint16_t new_val);
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,6 +57,8 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 volatile uint8_t ADC_flag=0;
 volatile uint8_t ADC_Mode=2;
+uint16_t wave_buf[256]={2048};
+uint16_t wave_idx = 0;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -70,8 +73,7 @@ uint16_t ADC_READ[1];
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-uint16_t wave_buf[256];
-uint16_t wave_idx = 0;
+
 
 const static uint16_t arr1[2]={0,4095};        //方波
 uint8_t arr1_index=0; //指向arr1的第几个元素 索引
@@ -107,11 +109,11 @@ static const uint16_t arr2[256] = {                                     //正弦
   673,  711,  750,  789,  829,  870,  911,  953,
   996, 1039, 1083, 1128, 1173, 1219, 1265, 1312,
   1359, 1406, 1454, 1502, 1551, 1600, 1649, 1699,
-  1748, 1798, 1848, 1898, 1948, 1998
+  1748, 1798, 1848, 1898, 1948, 1998,
 };
-uint32_t arr2_index=0; //指向arr2的第几个元素 索引
+uint16_t arr2_index=0; //指向arr2的第几个元素 索引
 
-//给uint16_t方便后续判断，避免溢�??
+//给uint16_t方便后续判断，避免溢出
 
 //三角
 static const uint16_t arr3[256] = { 
@@ -193,7 +195,7 @@ switch (ADC_Mode)
 {
 case 1 :
   DAC_writebytes(&(arr1[arr1_index]));
-printf("transfer=%d\n",(arr1[arr1_index]));
+// printf("transfer=%d\n",(arr1[arr1_index]));
   if (++arr1_index==2)
   {
   arr1_index=0;
@@ -202,8 +204,8 @@ printf("transfer=%d\n",(arr1[arr1_index]));
 
 case 2:
   DAC_writebytes(&(arr2[arr2_index]));
-printf("transfer=%d\n",(arr2[arr2_index]));
-  if (++arr2_index==256)
+// printf("transfer=%d\n",(arr2[arr2_index]));
+  if (++arr2_index==246)
   {
   arr2_index=0;
   }
@@ -211,7 +213,7 @@ break;
 
 case 3:
   DAC_writebytes(&(arr3[arr3_index]));
-printf("transfer=%d\n",(arr3[arr3_index]));
+
   if (++arr3_index==256)
   {
   arr3_index=0;
@@ -222,16 +224,10 @@ default:
   break;
 }
 
+Wave_AddPoint(ADC_READ[0]);
+ADC_flag=0;
 
 
-// after transfer V,read the V by ADC
-wave_buf[wave_idx++] = ADC_READ[0];   
-
-if (wave_idx >= 256)
-{
-    wave_idx = 0;
-    OLED_DrawWave(wave_buf, 256);     
-}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -309,25 +305,55 @@ void Error_Handler(void)
 
 void OLED_DrawWave(uint16_t *buf, uint16_t len)
 {
-    int16_t screenW = oled_getWidth();
-    int16_t screenH = oled_getHeight();
+    int16_t screenW = oled_getWidth();   // 屏幕宽度，比如 128
+    int16_t screenH = oled_getHeight();  // 屏幕高度，比如 64
 
     if (len < 2 || screenH < 2) return;
 
+    // 清屏
     ssd1306_clearScreen();
+
+    // 画一条水平中线作为参考线
     ssd1306_drawLine(0, screenH / 2, screenW - 1, screenH / 2, WHITE);
 
-    for (uint16_t i = 0; i < len - 1; i++)
-    {
-        int16_t x0 = (int16_t)i;
-        int16_t x1 = (int16_t)(i + 1);
-        int16_t y0 = (int16_t)(screenH - 1 - ((uint32_t)buf[i] * (screenH - 1) / 4095));
-        int16_t y1 = (int16_t)(screenH - 1 - ((uint32_t)buf[i + 1] * (screenH - 1) / 4095));
+    // 计算第一个点的 Y 坐标
+    int16_t last_x = 0;
+    int16_t last_y = (int16_t)(screenH - 1 - ((uint32_t)buf[0] * (screenH - 1) / 4095));
 
-        ssd1306_drawLine(x0, y0, x1, y1, WHITE);
+    // 从屏幕第 1 列开始，逐列画线
+    for (int16_t x = 1; x < screenW; x++)
+    {
+        // 根据当前屏幕列 x，反推应该取数据数组里的第几个点
+        uint32_t src = (uint32_t)x * (len - 1) / (screenW - 1);
+        if (src >= len) src = len - 1;
+
+        // 计算当前列对应的 Y 坐标
+        int16_t y = (int16_t)(screenH - 1 - ((uint32_t)buf[src] * (screenH - 1) / 4095));
+
+        // 从上一列的点画线到当前列的点
+        ssd1306_drawLine(last_x, last_y, x, y, WHITE);
+
+        // 更新“上一列的点”
+        last_x = x;
+        last_y = y;
     }
 
     ssd1306_updateScreen();
+}
+
+
+
+void Wave_AddPoint(uint16_t new_val)
+{
+    // 将所有点左移一位，丢弃最左边的旧数据
+    for (uint16_t i = 0; i < 256 - 1; i++)
+        wave_buf[i] = wave_buf[i + 1];
+
+    // 新数据放在最右边
+    wave_buf[256 - 1] = new_val;
+
+    // 重绘整个波形
+    OLED_DrawWave(wave_buf, 256);
 }
 
 #ifdef  USE_FULL_ASSERT
